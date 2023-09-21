@@ -6,5 +6,7 @@ This script takes the kernel version of Linux and:
 ## How to run 
 - Get the Linux kernel version using `uname -v`
   ![Get Linux Kernel version](uname.png)
+  
 - Submit the version to the script
+  
   ![Get github links of each CVE identified](CVEs_github.png)
