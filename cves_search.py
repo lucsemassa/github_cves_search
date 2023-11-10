@@ -2,6 +2,7 @@ import requests
 import json
 import sys
 import time
+import argparse
 from bs4 import BeautifulSoup
 
 
@@ -64,40 +65,59 @@ def main():
     # Define the URL with the kernel version (e.g., 5.15.70)
    
    
+    parser = argparse.ArgumentParser(description="Github payload searcher by shinningstar.")
+    parser.add_argument('-c', '--cve', type=str, help='CVE string (Ex: CVE-2023-27163)')
+    parser.add_argument('-k', '--kernel', type=str, help='Linux kernel string (Ex: 5.15.70)')
 
-    # Check if a search query is provided as a command-line argument
-    if len(sys.argv) < 2:
-        print("Usage: python script_name.py <search_query>")
-        sys.exit(1)
-
-    # Get the search query from the command-line argument
-    kernel_version = sys.argv[1]
-    url = f"https://nvd.nist.gov/vuln/search/results?isCpeNameSearch=false&cpe_vendor=cpe%3A%2F%3Alinux&cpe_version=cpe%3A%2F%3Alinux%3Alinux_kernel%3A{kernel_version}&query=escalate&cpe_product=cpe%3A%2F%3Alinux%3Alinux_kernel&results_type=overview&form_type=Advanced&search_type=all&startIndex="
-
-    get_first_cve = search_cve(url+"0")
-
-    if(get_first_cve ==  None):
-        print("Failed to retrieve data. Status code:", response.status_code)
-        exit()
-
-
-    matching_records_count = get_first_cve[0]
-    displaying_count_through = get_first_cve[1]
+    args = parser.parse_args()
     
+    if not args.cve and not args.kernel:
+        parser.print_help() 
+        sys.exit(1)  
 
-    remainder = 1 if (matching_records_count % displaying_count_through != 0 and matching_records_count > displaying_count_through) else 0
-
-    for i in range(1, int(matching_records_count/displaying_count_through)+remainder+1):
-        search_cve(url+str(i*20))
-
-    if cves:
-        print("CVEs related to Linux Kernel", kernel_version)
-        for cve in cves:
-            print(cve)
-            search_github(cve.replace(" ", ""))
-            #print("")
-
+    # Get the search queries from the command-line argument
+    if args.kernel :
+        kernel_version = args.kernel
     else:
-        print("No CVEs found for the specified kernel version.")
+        kernel_version = ""
+
+    if args.cve :    
+        cve_search_str = args.cve
+    else:
+        cve_search_str = ""
+
+    if(cve_search_str=="" and kernel_version!=""):
+    
+        url = f"https://nvd.nist.gov/vuln/search/results?isCpeNameSearch=false&cpe_vendor=cpe%3A%2F%3Alinux&cpe_version=cpe%3A%2F%3Alinux%3Alinux_kernel%3A{kernel_version}&query=escalate&cpe_product=cpe%3A%2F%3Alinux%3Alinux_kernel&results_type=overview&form_type=Advanced&search_type=all&startIndex="
+
+        get_first_cve = search_cve(url+"0")
+
+        if(get_first_cve ==  None):
+            print("Failed to retrieve data. Status code:", response.status_code)
+            exit()
+
+
+        matching_records_count = get_first_cve[0]
+        displaying_count_through = get_first_cve[1]
+        
+
+        remainder = 1 if (matching_records_count % displaying_count_through != 0 and matching_records_count > displaying_count_through) else 0
+
+        for i in range(1, int(matching_records_count/displaying_count_through)+remainder+1):
+            search_cve(url+str(i*20))
+
+        if cves:
+            print("CVEs related to Linux Kernel", kernel_version)
+            for cve in cves:
+                print(cve)
+                search_github(cve.replace(" ", ""))
+                #print("")
+
+        else:
+            print("No CVEs found for the specified kernel version.")
+    
+    elif (cve_search_str!=""):
+        print("Public github links related to CVE", cve_search_str)
+        search_github(cve_search_str.replace(" ", ""))
 
 main()
