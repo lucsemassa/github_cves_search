@@ -5,7 +5,7 @@ This script :
 
 ## How to run 
 ### Find public github exploits related to a particular CVE
-![Get public github exploit for CVE](cve_serach.png)
+![Get public github exploit for CVE](cve_search.png)
   
 ### Find public github exploits for privilege escalation related to a linux kernel 
 - Get the Linux kernel version using `uname -v`
