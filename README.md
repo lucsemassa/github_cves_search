@@ -1,12 +1,16 @@
-# linux_kernel_cves_search
-This script takes the kernel version of Linux and:
-1. Find CVEs associted with that version than can be used for **privilege escalation** on NIST vulnerability database
-2. Find public exploits on github associated with each CVE identified
+# cves_search
+This script :
+1. Find public github exploits related to a particular CVE
+2. Take the kernel version of Linux, find CVEs associted with that version than can be used for **privilege escalation** on NIST vulnerability database and find public exploits on github associated with each CVE identified
 
 ## How to run 
+### Find public github exploits related to a particular CVE
+![Get public github exploit for CVE](cve_serach.png)
+  
+### Find public github exploits for privilege escalation related to a linux kernel 
 - Get the Linux kernel version using `uname -v`
   ![Get Linux Kernel version](uname.png)
   
 - Submit the version to the script
   
-  ![Get github links of each CVE identified](CVEs_github.png)
+  ![Get github links of each CVE identified](kernel_search.png)
