@@ -38,7 +38,7 @@ def search_github_cve(cve_search):
     # Define headers for the API request
     headers = {
         "Accept": "application/vnd.github.v3+json",
-        # "Authorization": f"Bearer {GITHUB_API_TOKEN}",  # Uncomment and include your GitHub token if needed
+        # "Authorization": f"Bearer {GITHUB_API_TOKEN}",  # Uncomment and include your GitHub token
     }
 
     # GitHub API
