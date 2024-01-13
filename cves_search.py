@@ -9,7 +9,9 @@ from bs4 import BeautifulSoup
 
 cves = []
 
-def search_cve(link):
+def search_cve(link, startIndex="0"):
+    link = link+"&startIndex="+startIndex
+    
     global cves
     response = requests.get(link)
     if response.status_code == 200:
@@ -23,13 +25,14 @@ def search_cve(link):
         
         for result in soup.find_all(lambda tag: tag.name == 'a' and tag.get('data-testid', '').startswith('vuln-detail-link-')):
             cve = result.text.strip()
-            cves.append(cve)
+            if(not cve in cves):
+                cves.append(cve)
     else:
         return None
 
     return [matching_records_count, displaying_count_through]
 
-def search_github(cve_search):
+def search_github_cve(cve_search):
     # Set the GitHub API URL
     api_url = "https://api.github.com/search/repositories?q="+cve_search
 
@@ -65,15 +68,22 @@ def main():
     # Define the URL with the kernel version (e.g., 5.15.70)
    
    
-    parser = argparse.ArgumentParser(description="Github payload searcher by shinningstar.")
+    parser = argparse.ArgumentParser(description="Github payload searcher by shinningstar")
     parser.add_argument('-c', '--cve', type=str, help='CVE string (Ex: CVE-2023-27163)')
     parser.add_argument('-k', '--kernel', type=str, help='Linux kernel string (Ex: 5.15.70)')
+    parser.add_argument('-p', '--product', type=str, help='Product to be scanned (Ex: Joomla)')
+    parser.add_argument('-pv', '--productversion', type=str, help='Version of the product (Ex: 4.2.6)')
 
     args = parser.parse_args()
     
-    if not args.cve and not args.kernel:
+    if not args.cve and not args.kernel and not args.product :
         parser.print_help() 
         sys.exit(1)  
+
+    if  args.product and not args.productversion:
+        print("You must enter the product version")
+        sys.exit(1)  
+
 
     # Get the search queries from the command-line argument
     if args.kernel :
@@ -86,14 +96,24 @@ def main():
     else:
         cve_search_str = ""
 
-    if(cve_search_str=="" and kernel_version!=""):
+    if(cve_search_str==""):
     
-        url = f"https://nvd.nist.gov/vuln/search/results?isCpeNameSearch=false&cpe_vendor=cpe%3A%2F%3Alinux&cpe_version=cpe%3A%2F%3Alinux%3Alinux_kernel%3A{kernel_version}&query=escalate&cpe_product=cpe%3A%2F%3Alinux%3Alinux_kernel&results_type=overview&form_type=Advanced&search_type=all&startIndex="
+        if(kernel_version!=""):
+            url = f"https://nvd.nist.gov/vuln/search/results?isCpeNameSearch=false&cpe_vendor=cpe%3A%2F%3Alinux&cpe_version=cpe%3A%2F%3Alinux%3Alinux_kernel%3A{kernel_version}&query=escalate&cpe_product=cpe%3A%2F%3Alinux%3Alinux_kernel&results_type=overview&form_type=Advanced&search_type=all"
+        
+        elif(args.product !=""):
+            product = args.product.lower()
+            product_version = args.productversion.lower().replace(" ","")
+            url = f"https://nvd.nist.gov/vuln/search/results?form_type=Advanced&results_type=overview&search_type=all&isCpeNameSearch=false&&cpe_product=cpe:/::{product}:{product_version}"
 
-        get_first_cve = search_cve(url+"0")
+        get_first_cve = search_cve(url)
+        if(args.product and (get_first_cve == None or get_first_cve == [0, 0])):
+            time.sleep(5)
+            url = f"https://nvd.nist.gov/vuln/search/results?form_type=Advanced&results_type=overview&search_type=all&isCpeNameSearch=false&&cpe_product=cpe:/:{product}::{product_version}"
+            get_first_cve = search_cve(url)
 
-        if(get_first_cve ==  None):
-            print("Failed to retrieve data. Status code:", response.status_code)
+        if(get_first_cve == None or get_first_cve == [0, 0]):
+            print("No cves found!")
             exit()
 
 
@@ -101,16 +121,20 @@ def main():
         displaying_count_through = get_first_cve[1]
         
 
-        remainder = 1 if (matching_records_count % displaying_count_through != 0 and matching_records_count > displaying_count_through) else 0
+        remainder = 1 if (matching_records_count % displaying_count_through != 0 and matching_records_count > displaying_count_through) else 0 
 
-        for i in range(1, int(matching_records_count/displaying_count_through)+remainder+1):
-            search_cve(url+str(i*20))
+        if (remainder != 0):
+            for i in range(1, int(matching_records_count/displaying_count_through)+remainder+1):
+                search_cve(url,str(i*20))
 
         if cves:
-            print("CVEs related to Linux Kernel", kernel_version)
+            if(kernel_version):
+                print("CVEs related to Linux Kernel", kernel_version)
+            elif(product):
+                print("CVEs related to ", args.product, " version ", product_version)
             for cve in cves:
                 print(cve)
-                search_github(cve.replace(" ", ""))
+                search_github_cve(cve.replace(" ", ""))
                 #print("")
 
         else:
@@ -118,6 +142,6 @@ def main():
     
     elif (cve_search_str!=""):
         print("Public github links related to CVE", cve_search_str)
-        search_github(cve_search_str.replace(" ", ""))
+        search_github_cve(cve_search_str.replace(" ", ""))
 
 main()
