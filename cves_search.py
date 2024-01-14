@@ -70,78 +70,65 @@ def main():
    
     parser = argparse.ArgumentParser(description="Github payload searcher by shinningstar")
     parser.add_argument('-c', '--cve', type=str, help='CVE string (Ex: CVE-2023-27163)')
-    parser.add_argument('-k', '--kernel', type=str, help='Linux kernel string (Ex: 5.15.70)')
+    parser.add_argument('-l', '--linux', type=str, help='Linux kernel string (Ex: 5.15.70)')
+    parser.add_argument('-w', '--windows', action='store_true', help='Windows related string (Ex: 10.0.0.1)')
     parser.add_argument('-p', '--product', type=str, help='Product to be scanned (Ex: Joomla)')
     parser.add_argument('-pv', '--productversion', type=str, help='Version of the product (Ex: 4.2.6)')
 
     args = parser.parse_args()
     
-    if not args.cve and not args.kernel and not args.product :
+    if not any([args.cve, args.kernel, args.product, args.windows]):
         parser.print_help() 
         sys.exit(1)  
 
-    if  args.product and not args.productversion:
+    if args.product and not args.productversion:
         print("You must enter the product version")
         sys.exit(1)  
 
+    url = ""
+    if args.kernel:
+        url = f"https://nvd.nist.gov/vuln/search/results?isCpeNameSearch=false&cpe_vendor=cpe%3A%2F%3Alinux&cpe_version=cpe%3A%2F%3Alinux%3Alinux_kernel%3A{args.kernel}&query=escalate&cpe_product=cpe%3A%2F%3Alinux%3Alinux_kernel&results_type=overview&form_type=Advanced&search_type=all"
+    elif args.product:
+        product = args.product.lower()
+        product_version = args.productversion.lower().replace(" ", "")
+        url = f"https://nvd.nist.gov/vuln/search/results?form_type=Advanced&results_type=overview&search_type=all&isCpeNameSearch=false&&cpe_product=cpe:/::{product}:{product_version}"
+    elif args.windows:
+        windows_version = args.windows.lower().replace(" ", "")
+        url = f"https://nvd.nist.gov/vuln/search/results?query=windows+{windows_version}&search_type=all&results_type=overview&form_type=Basic"
 
-    # Get the search queries from the command-line argument
-    if args.kernel :
-        kernel_version = args.kernel
-    else:
-        kernel_version = ""
-
-    if args.cve :    
-        cve_search_str = args.cve
-    else:
-        cve_search_str = ""
-
-    if(cve_search_str==""):
-    
-        if(kernel_version!=""):
-            url = f"https://nvd.nist.gov/vuln/search/results?isCpeNameSearch=false&cpe_vendor=cpe%3A%2F%3Alinux&cpe_version=cpe%3A%2F%3Alinux%3Alinux_kernel%3A{kernel_version}&query=escalate&cpe_product=cpe%3A%2F%3Alinux%3Alinux_kernel&results_type=overview&form_type=Advanced&search_type=all"
-        
-        elif(args.product !=""):
-            product = args.product.lower()
-            product_version = args.productversion.lower().replace(" ","")
-            url = f"https://nvd.nist.gov/vuln/search/results?form_type=Advanced&results_type=overview&search_type=all&isCpeNameSearch=false&&cpe_product=cpe:/::{product}:{product_version}"
-
+    if url:
         get_first_cve = search_cve(url)
-        if(args.product and (get_first_cve == None or get_first_cve == [0, 0])):
+        if args.product and (get_first_cve is None or get_first_cve == [0, 0]):
             time.sleep(5)
             url = f"https://nvd.nist.gov/vuln/search/results?form_type=Advanced&results_type=overview&search_type=all&isCpeNameSearch=false&&cpe_product=cpe:/:{product}::{product_version}"
             get_first_cve = search_cve(url)
 
-        if(get_first_cve == None or get_first_cve == [0, 0]):
-            print("No cves found!")
+        if get_first_cve is None or get_first_cve == [0, 0]:
+            print("No CVEs found!")
             exit()
 
-
-        matching_records_count = get_first_cve[0]
-        displaying_count_through = get_first_cve[1]
-        
+        matching_records_count, displaying_count_through = get_first_cve
 
         remainder = 1 if (matching_records_count % displaying_count_through != 0 and matching_records_count > displaying_count_through) else 0 
-
-        if (remainder != 0):
-            for i in range(1, int(matching_records_count/displaying_count_through)+remainder+1):
-                search_cve(url,str(i*20))
+        if remainder != 0:
+            for i in range(1, int(matching_records_count / displaying_count_through) + remainder + 1):
+                search_cve(url, str(i * 20))
 
         if cves:
-            if(kernel_version):
-                print("CVEs related to Linux Kernel", kernel_version)
-            elif(product):
-                print("CVEs related to ", args.product, " version ", product_version)
+            if args.kernel:
+                print(f"CVEs related to Linux Kernel {args.kernel}")
+            elif args.product:
+                print(f"CVEs related to {args.product} version {args.productversion}")
+            elif args.windows:
+                print(f"CVEs related to Windows {args.windows}")
             for cve in cves:
                 print(cve)
                 search_github_cve(cve.replace(" ", ""))
-                #print("")
-
         else:
-            print("No CVEs found for the specified kernel version.")
-    
-    elif (cve_search_str!=""):
-        print("Public github links related to CVE", cve_search_str)
-        search_github_cve(cve_search_str.replace(" ", ""))
+            print("No CVEs found for the specified parameters.")
+
+    elif args.cve:
+        print(f"Public GitHub links related to CVE {args.cve}")
+        search_github_cve(args.cve.replace(" ", ""))
 
 main()
