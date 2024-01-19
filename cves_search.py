@@ -32,15 +32,17 @@ def search_cve(link, startIndex="0"):
 
     return [matching_records_count, displaying_count_through]
 
-def search_github_cve(cve_search):
+def search_github_cve(cve_search, api_token=None):
     # Set the GitHub API URL
     api_url = "https://api.github.com/search/repositories?q="+cve_search
 
     # Define headers (optional, you can include your token here)
     headers = {
-        "Accept": "application/vnd.github.v3+json",
-        # "Authorization": f"Bearer {GITHUB_API_TOKEN}",  # Uncomment and replace with your token
+        "Accept": "application/vnd.github.v3+json"
     }
+
+    if api_token:
+        headers["Authorization"] = f"Bearer {api_token}"
 
     # Send the GET request to the GitHub API
     cve_response = requests.get(api_url, headers=headers)
@@ -73,6 +75,7 @@ def main():
     parser.add_argument('-k', '--kernel', type=str, help='Linux kernel string (Ex: 5.15.70)')
     parser.add_argument('-p', '--product', type=str, help='Product to be scanned (Ex: Joomla)')
     parser.add_argument('-pv', '--productversion', type=str, help='Version of the product (Ex: 4.2.6)')
+    parser.add_argument('-t', '--api-token', type=str, help='GitHub API token')
 
     args = parser.parse_args()
     
