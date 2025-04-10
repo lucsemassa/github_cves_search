@@ -5,15 +5,21 @@ import time
 import argparse
 from bs4 import BeautifulSoup
 
-
-
 cves = []
+
+# Define headers (optional, you can include your token here)  
+headers = {
+        "Accept": "application/vnd.github.v3+json",
+        "User-agent": "Mozilla/5.0 (X11; Linux x86_64; rv:135.0) Gecko/20100101 Firefox/135.0",
+        # "Authorization": f"Bearer {GITHUB_API_TOKEN}",  # Uncomment and replace with your token
+    }
 
 def search_cve(link, startIndex="0"):
     link = link+"&startIndex="+startIndex
     
-    global cves
-    response = requests.get(link)
+    global cves, headers
+    response = requests.get(link, headers=headers)
+ 
     if response.status_code == 200:
         # Parse the HTML content of the response
         soup = BeautifulSoup(response.text, 'html.parser')
@@ -22,7 +28,6 @@ def search_cve(link, startIndex="0"):
         displaying_count_through = int(soup.find('strong', {'data-testid': 'vuln-displaying-count-through'}).text)
 
         # Extract CVEs
-        
         for result in soup.find_all(lambda tag: tag.name == 'a' and tag.get('data-testid', '').startswith('vuln-detail-link-')):
             cve = result.text.strip()
             if(not cve in cves):
@@ -33,14 +38,10 @@ def search_cve(link, startIndex="0"):
     return [matching_records_count, displaying_count_through]
 
 def search_github_cve(cve_search):
+    global headers
+
     # Set the GitHub API URL
     api_url = "https://api.github.com/search/repositories?q="+cve_search
-
-    # Define headers (optional, you can include your token here)
-    headers = {
-        "Accept": "application/vnd.github.v3+json",
-        # "Authorization": f"Bearer {GITHUB_API_TOKEN}",  # Uncomment and replace with your token
-    }
 
     # Send the GET request to the GitHub API
     cve_response = requests.get(api_url, headers=headers)
